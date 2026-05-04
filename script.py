@@ -3,9 +3,31 @@ import requests
 
 WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 
-mensaje = "✅ GitHub Actions ya puede mandar mensajes a Discord"
+ITEM_ID = "MPE737220072"  # ID correcto del producto en Perú
 
-response = requests.post(WEBHOOK_URL, json={"content": mensaje})
+url = f"https://api.mercadolibre.com/items/{ITEM_ID}"
+
+response = requests.get(url)
 response.raise_for_status()
 
-print("Mensaje enviado a Discord")
+data = response.json()
+
+titulo = data["title"]
+precio = data["price"]
+moneda = data["currency_id"]
+link = data["permalink"]
+
+mensaje = (
+    f"📦 {titulo}\n"
+    f"💰 Precio actual: {moneda} {precio}\n"
+    f"🔗 {link}"
+)
+
+discord_response = requests.post(
+    WEBHOOK_URL,
+    json={"content": mensaje}
+)
+
+discord_response.raise_for_status()
+
+print("Precio enviado a Discord")
