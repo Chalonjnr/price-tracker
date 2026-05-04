@@ -1,50 +1,48 @@
 import os
+import re
 import requests
+from bs4 import BeautifulSoup
 
 WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 
-QUERY = "xiaomi mi tv box s 3ra google tv 4k"
-URL_OBJETIVO = "https://www.mercadolibre.com.pe/xiaomi-mi-tv-box-s-3ra-con-google-tv-4k-chromecast-no-stick/up/MPEU3235961795"
-
-url = "https://api.mercadolibre.com/sites/MPE/search"
+URL = "https://www.mercadolibre.com.pe/xiaomi-mi-tv-box-s-3ra-con-google-tv-4k-chromecast-no-stick/up/MPEU3235961795"
 
 headers = {
     "User-Agent": "Mozilla/5.0",
-    "Accept": "application/json",
+    "Accept-Language": "es-PE,es;q=0.9,en;q=0.8",
 }
 
-params = {
-    "q": QUERY,
-    "limit": 5,
-}
-
-response = requests.get(url, headers=headers, params=params)
+response = requests.get(URL, headers=headers, timeout=20)
 
 print("STATUS:", response.status_code)
-print("BODY:", response.text[:500])
+
+if response.status_code in [403, 429]:
+    raise Exception("Mercado Libre bloqueó la solicitud. No continuamos.")
 
 response.raise_for_status()
 
-data = response.json()
-results = data.get("results", [])
+html = response.text
+soup = BeautifulSoup(html, "html.parser")
 
-if not results:
-    raise Exception("No encontré productos en Mercado Libre Perú.")
+titulo = soup.find("h1")
+titulo = titulo.get_text(strip=True) if titulo else "Producto Mercado Libre"
 
-producto = results[0]
+# Busca precios en el HTML
+texto = soup.get_text(" ", strip=True)
+match = re.search(r"S/\s*([\d.,]+)", texto)
 
-titulo = producto["title"]
-precio = producto["price"]
-moneda = producto["currency_id"]
-link = producto["permalink"]
+if not match:
+    raise Exception("No pude encontrar el precio en la página.")
+
+precio = match.group(1)
 
 mensaje = (
     f"📦 {titulo}\n"
-    f"💰 Precio actual: {moneda} {precio}\n"
-    f"🔗 {link}"
+    f"💰 Precio detectado: S/ {precio}\n"
+    f"🔗 {URL}"
 )
 
 discord_response = requests.post(WEBHOOK_URL, json={"content": mensaje})
 discord_response.raise_for_status()
 
-print("Precio enviado a Discord") 
+print("Precio enviado a Discord")
