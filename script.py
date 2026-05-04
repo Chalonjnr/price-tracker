@@ -47,4 +47,4 @@ mensaje = (
 discord_response = requests.post(WEBHOOK_URL, json={"content": mensaje})
 discord_response.raise_for_status()
 
-print("Precio enviado a Discord")
+print("Precio enviado a Discord") 
